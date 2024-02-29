@@ -51,6 +51,7 @@ Algebra.negativeOfAddition = async (negative, session) => {
 		}
 		
 		negative.replaceBy(add);
+		
 		return true;
 	}
 	
@@ -71,14 +72,13 @@ Algebra.negativeOfMultiplication = async (negative, session) => {
 				"Value",
 				first.get("Value").negate()
 			);
-			
-			return false;
 		}
 		else {
 			mul.addChildAt(0, CanonicalArithmetic.number2InternalNumber(-1));
-			negative.replaceBy(mul);
-			return true;
 		}
+		
+		negative.replaceBy(mul);
+		return true;
 	}
 	
 	return false;
