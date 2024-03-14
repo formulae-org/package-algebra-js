@@ -337,7 +337,7 @@ Algebra.divisionExtractNumericsAlone = async (division, session) => {
 
 // x ^ 0   ->   1
 // x ^ 1   ->   x
-// 0 ^ x   ->   0 or infinity (if x is negative)
+// 0 ^ x   ->   0 or infinity (if x is negative) // NO, we cannot know the sign of the x expression
 // 1 ^ x   ->   1
 
 Algebra.exponentiationSpecials = async (exponentiation, session) => {
@@ -356,7 +356,7 @@ Algebra.exponentiationSpecials = async (exponentiation, session) => {
 		exponentiation.replaceBy(
 			CanonicalArithmetic.number2InternalNumber(
 				1,
-				exponent instanceof CanonicalArithmeticDecimal ||
+				exponent instanceof CanonicalArithmetic.Decimal ||
 				(b !== null && b instanceof CanonicalArithmetic.Decimal)
 			)
 		);
@@ -385,13 +385,11 @@ Algebra.exponentiationSpecials = async (exponentiation, session) => {
 		return true;
 	}
 	
-	let b = base.isInternalNumber() ? exponent.get("Value") : null;
-	
 	/////////////////////////////////
 	// 0 ^  numeric   =>  0        //
 	// 0 ^ -numeric   =>  infinity //
 	/////////////////////////////////
-	
+	/*
 	if (b !== null && b.isZero()) {
 		if (e !== null) {
 			if (e.isNegative()) {
@@ -410,10 +408,13 @@ Algebra.exponentiationSpecials = async (exponentiation, session) => {
 			}
 		}
 	}
+	*/
 	
 	////////////////////
 	// 1 ^ x   =>   1 //
 	////////////////////
+	
+	let b = base.isInternalNumber() ? base.get("Value") : null;
 	
 	if (b !== null && b.isOne()) {
 		exponentiation.replaceBy(
@@ -485,5 +486,6 @@ Algebra.setReducers = () => {
 	//ReductionManager.addReducer("Math.Arithmetic.Division", Algebra.divisionExtractNumericsAlone, "Algebra.divisionExtractNumericsAlone", { symbolic: true });
 	
 	//ReductionManager.addReducer("Math.Arithmetic.Exponentiation", Algebra.exponentiationSpecials,                 "Algebra.exponentiationSpecials",                 { symbolic: true });
+	ReductionManager.addReducer("Math.Arithmetic.Exponentiation", Algebra.exponentiationSpecials, "Algebra.exponentiationSpecials");
 	//ReductionManager.addReducer("Math.Arithmetic.Exponentiation", Algebra.exponentiationMultiplicationOrDivision, "Algebra.exponentiationMultiplicationOrDivision", { symbolic: true });
 };
