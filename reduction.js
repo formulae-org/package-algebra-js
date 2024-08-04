@@ -90,7 +90,7 @@ Algebra.negativeOfMultiplication = async (negative, session) => {
 //
 // c * [-]y * [-]z
 //      c y z       if number of negatives is even
-//     -c x y z     if number of negatives is odd)
+//     -c y z       if number of negatives is odd)
 
 Algebra.multiplicationNegatives = async (multiplication, session) => {
 	let negatives = 0;
