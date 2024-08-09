@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 export class Algebra extends Formulae.ReductionPackage {};
 
+/*
 // --x   ->   x
 
 Algebra.negativeOfNegative = async (negative, session) => {
@@ -83,6 +84,7 @@ Algebra.negativeOfMultiplication = async (negative, session) => {
 	
 	return false;
 };
+*/
 
 // [-]x * [-]y * [-]z
 //        x y z     if number of negatives is even
@@ -470,9 +472,10 @@ Algebra.exponentiationMultiplicationOrDivision = async (exponentiation, session)
 };
 
 Algebra.setReducers = () => {
-	ReductionManager.addReducer("Math.Arithmetic.Negative", Algebra.negativeOfNegative,       "Algebra.negativeOfNegative");
-	ReductionManager.addReducer("Math.Arithmetic.Negative", Algebra.negativeOfAddition,       "Algebra.negativeOfAddition");
-	ReductionManager.addReducer("Math.Arithmetic.Negative", Algebra.negativeOfMultiplication, "Algebra.negativeOfMultiplication");
+	// Internal representation
+	//ReductionManager.addReducer("Math.Arithmetic.Negative", Algebra.negativeOfNegative,       "Algebra.negativeOfNegative");
+	//ReductionManager.addReducer("Math.Arithmetic.Negative", Algebra.negativeOfAddition,       "Algebra.negativeOfAddition");
+	//ReductionManager.addReducer("Math.Arithmetic.Negative", Algebra.negativeOfMultiplication, "Algebra.negativeOfMultiplication");
 	
 	ReductionManager.addReducer("Math.Arithmetic.Addition", ReductionManager.itselfReducer,   "ReductionManager.itselfReducer",   { symbolic: false });
 	
