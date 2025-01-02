@@ -84,7 +84,6 @@ Algebra.negativeOfMultiplication = async (negative, session) => {
 	
 	return false;
 };
-*/
 
 // [-]x * [-]y * [-]z
 //        x y z     if number of negatives is even
@@ -120,6 +119,8 @@ Algebra.multiplicationNegatives = async (multiplication, session) => {
 	
 	return false;
 };
+
+*/
 
 // x * (y + z)   =>   xy + xz
 
@@ -157,6 +158,7 @@ Algebra.multiplicationDistributiveOverAddition = async (multiplication, session)
 //  x / -y   =>   - ( x / y )
 // -x / -y   =>       x / y
 
+/*
 Algebra.divisionNegatives = async (division, session) => {
 	let x = 0;
 	
@@ -190,32 +192,38 @@ Algebra.divisionNegatives = async (division, session) => {
 	
 	return false; // Ok, forward to other forms of Division
 };
+*/
 
-// x / 0   =>   Infinity
+// x / 0   =>   Undefined
 // x / 1   =>   x
 // 0 / x   =>   0
 
 Algebra.divisionZeroOne = async (division, session) => {
 	let den = division.children[1];
 	
-	if (CanonicalArithmetic.isZero(den)) {
-		division.replaceBy(Formulae.createExpression(Arithmetic.TAG_INFINITY));
-		//session.log("Division with denominator zero reduces to infinity");
-		return true;
-	}
-	
-	if (CanonicalArithmetic.isOne(den)) {
-		division.replaceBy(division.children[0]);
-		//session.log("Division with denominator one reduces to numerator");
-		return true;
+	if (den.isInternalNumber()) {
+		den = den.get("Value");
+		
+		if (den.isZero()) {
+			division.replaceBy(Formulae.createExpression("Undefined"));
+			return true;
+		}
+		
+		if (den.isOne()) {
+			division.replaceBy(division.children[0]);
+			return true;
+		}
 	}
 	
 	let num = division.children[0];
 	
-	if (CanonicalArithmetic.isZero(num)) {
-		division.replaceBy(num);
-		//session.log("Division with numerator zero reduces to zero");
-		return true;
+	if (num.isInternalNumber()) {
+		num = num.get("Value");
+		
+		if (num.isZero()) {
+			division.replaceBy(division.children[0]);
+			return true;
+		}
 	}
 	
 	return false; // Ok, forward to other forms of Division
@@ -265,16 +273,16 @@ Algebra.divisionExtractNumerics = async (division, session) => {
 		division.replaceBy(multiplication);
 		
 		if (d === null) {
-			multiplication.addChild(CanonicalArithmetic.canonical2InternalNumber(n));
+			multiplication.addChild(CanonicalArithmetic.createInternalNumber(n));
 		}
 		else {
 			if (n === null) {
-				n = new CanonicalArithmetic.Integer(1n);
+				n = CanonicalArithmetic.getIntegerOne(session);
 			}
 			
 			multiplication.addChild(
-				CanonicalArithmetic.canonical2InternalNumber(
-					n.division(d, session)
+				CanonicalArithmetic.createInternalNumber(
+					CanonicalArithmetic.division(n, d, session)
 				)
 			);
 		}
@@ -302,39 +310,46 @@ Algebra.divisionExtractNumerics = async (division, session) => {
 // x / number   ->   1/number * x
 
 Algebra.divisionExtractNumericsAlone = async (division, session) => {
-	let isn = division.children[0].isInternalNumber();
-	let isd = division.children[1].isInternalNumber();
-	
-	if (isn === isd) return false;
-	
-	if (isn) { // only the numerator is numeric
+	if (division.children[0].isInternalNumber()) { // the numerator is numeric
 		let n = division.children[0].get("Value");
+		if (n.isOne()) return false;
 		
-		if (n instanceof CanonicalArithmetic.Integer && n.integer === 1n) return false;
-		if (n instanceof CanonicalArithmetic.Decimal && n.decimal.equals(1)) return false;
-		
-		division.setChild(0, CanonicalArithmetic.createCanonicalNumber(1n));
-		let multiplication = Formulae.createExpression("Math.Arithmetic.Multiplication");
-		division.replaceBy(multiplication);
-		multiplication.addChild(CanonicalArithmetic.canonical2InternalNumber(n));
-		multiplication.addChild(division);
+		division.replaceBy(
+			Formulae.createExpression(
+				"Math.Arithmetic.Multiplication",
+				division.children[0],
+				Formulae.createExpression(
+					"Math.Arithmetic.Division",
+					CanonicalArithmetic.createInternalNumber(CanonicalArithmetic.getIntegerOne(session)),
+					division.children[1]
+				)
+			)
+		);
 		return true;
 	}
 	
 	// only the denominator is numeric
 	
-	let d = division.children[1].get("Value");
+	if (division.children[1].isInternalNumber()) {
+		let d = division.children[1].get("Value");
+		
+		division.replaceBy(
+			Formulae.createExpression(
+				"Math.Arithmetic.Multiplication",
+				CanonicalArithmetic.createInternalNumber(
+					CanonicalArithmetic.division(
+						CanonicalArithmetic.getIntegerOne(session),
+						d,
+						session
+					)
+				),
+				division.children[0]
+			)
+		);
+		return true;
+	}
 	
-	let multiplication = Formulae.createExpression("Math.Arithmetic.Multiplication");
-	division.replaceBy(multiplication);
-	n = new CanonicalArithmetic.Integer(1n);
-	multiplication.addChild(
-		CanonicalArithmetic.canonical2InternalNumber(
-			n.division(d, session)
-		)
-	);
-	multiplication.addChild(division);
-	return true;
+	return false;
 };
 
 // x ^ 0   ->   1
@@ -343,91 +358,43 @@ Algebra.divisionExtractNumericsAlone = async (division, session) => {
 // 1 ^ x   ->   1
 
 Algebra.exponentiationSpecials = async (exponentiation, session) => {
-	let base =     exponentiation.children[0];
+	let base     = exponentiation.children[0];
 	let exponent = exponentiation.children[1];
 	
 	let e = exponent.isInternalNumber() ? exponent.get("Value") : null;
 	
-	////////////////////
-	// x ^ 0   ->   1 //
-	////////////////////
-	
-	if (e !== null && e.isZero()) {
-		let b = base.isInternalNumber() ? base.get("Value") : null;
+	if (e !== null) {
+		// x ^ 0   ->   1
+		if (e.isZero()) {
+			exponentiation.replaceBy(
+				CanonicalArithmetic.createInternalNumber(
+					CanonicalArithmetic.isInteger(e) ? CanonicalArithmetic.getIntegerOne(session) : CanonicalArithmetic.getDecimalOne(session)
+				)
+			);
+			return true;
+		}
 		
-		exponentiation.replaceBy(
-			CanonicalArithmetic.number2InternalNumber(
-				1,
-				exponent instanceof CanonicalArithmetic.Decimal ||
-				(b !== null && b instanceof CanonicalArithmetic.Decimal)
-			)
-		);
-		//session.log("anything raised to zero reduces to one");
-		return true;
-	}
-	
-	////////////////////
-	// x ^ 1   =>   x //
-	////////////////////
-	
-	if (e !== null && e.isOne()) {
-		if (e instanceof CanonicalArithmetic.Integer) {
+		// x ^ 1   ->   x
+		if (e.isOne()) {
 			exponentiation.replaceBy(base);
-			//session.log("base raised to one reduces to base");
-		}
-		else {
-			let n = Formulae.createExpression("Math.Numeric");
-			n.addChild(base);
-			exponentiation.replaceBy(n);
-			//session.log("Numeric base");
-			await session.reduce(n);
-			//await session.reduce(exponentiation);
-		}
-		
-		return true;
-	}
-	
-	/////////////////////////////////
-	// 0 ^  numeric   =>  0        //
-	// 0 ^ -numeric   =>  infinity //
-	/////////////////////////////////
-	/*
-	if (b !== null && b.isZero()) {
-		if (e !== null) {
-			if (e.isNegative()) {
-				exponentiation.replaceBy(Formulae.createExpression("Math.Infinity"));
-			}
-			else { // exponent is no negative
-				exponentiation.replaceBy(
-					CanonicalArithmetic.number2InternalNumber(
-						0,
-						b instanceof CanonicalArithmetic.Decimal ||
-						e instanceof CanonicalArithmetic.Decimal
-					)
-				);
-				
-				return true;
-			}
+			return true;
 		}
 	}
-	*/
-	
-	////////////////////
-	// 1 ^ x   =>   1 //
-	////////////////////
 	
 	let b = base.isInternalNumber() ? base.get("Value") : null;
 	
-	if (b !== null && b.isOne()) {
-		exponentiation.replaceBy(
-			CanonicalArithmetic.number2InternalNumber(
-				1,
-				b instanceof CanonicalArithmetic.Decimal ||
-				(e !== null && e instanceof CanonicalArithmetic.Decimal)
-			)
-		);
-		//session.log("One raised to anything reduces to one");
-		return true;
+	if (b !== null) {
+		// 0 ^ x   ->   0
+		if (b.isZero()) {
+			exponentiation.replaceBy(base);
+			return true;
+		}
+		
+		// 1 ^ x   ->   1
+		if (b.isOne()) {
+			exponentiation.replaceBy(base);
+			return true;
+		}
 	}
 	
 	return false; // Ok, forward to other forms of Exponentiation
@@ -444,8 +411,8 @@ Algebra.exponentiationMultiplicationOrDivision = async (exponentiation, session)
 		
 		let exponent = exponentiation.children[1];
 		
-		if (!exponent.isInternalNumber()) return false;
-		if (!(exponent.get("Value") instanceof CanonicalArithmetic.Integer)) return false;
+		// Integer number exponent only
+		if (!(exponent.isInternalNumber() && CanonicalArithmetic.isInteger(exponent.get("Value")))) return false;
 		
 		let p;
 		let i, n = base.children.length;
@@ -472,23 +439,24 @@ Algebra.exponentiationMultiplicationOrDivision = async (exponentiation, session)
 };
 
 Algebra.setReducers = () => {
-	// Internal representation
+	// No negatives in internal representation
 	//ReductionManager.addReducer("Math.Arithmetic.Negative", Algebra.negativeOfNegative,       "Algebra.negativeOfNegative");
 	//ReductionManager.addReducer("Math.Arithmetic.Negative", Algebra.negativeOfAddition,       "Algebra.negativeOfAddition");
 	//ReductionManager.addReducer("Math.Arithmetic.Negative", Algebra.negativeOfMultiplication, "Algebra.negativeOfMultiplication");
 	
-	ReductionManager.addReducer("Math.Arithmetic.Addition", ReductionManager.itselfReducer,   "ReductionManager.itselfReducer",   { symbolic: false });
+	ReductionManager.addReducer("Math.Arithmetic.Addition", ReductionManager.itselfReducer, "ReductionManager.itselfReducer");
 	
-	ReductionManager.addReducer("Math.Arithmetic.Multiplication", ReductionManager.itselfReducer,                 "ReductionManager.itselfReducer",                 { symbolic: false });
-	ReductionManager.addReducer("Math.Arithmetic.Multiplication", Algebra.multiplicationNegatives,                "Algebra.multiplicationNegatives",                { symbolic: false });
-	ReductionManager.addReducer("Math.Arithmetic.Multiplication", Algebra.multiplicationDistributiveOverAddition, "Algebra.multiplicationDistributiveOverAddition", { symbolic: false });
+	ReductionManager.addReducer("Math.Arithmetic.Multiplication", ReductionManager.itselfReducer, "ReductionManager.itselfReducer");
 	
-	//ReductionManager.addReducer("Math.Arithmetic.Division", Algebra.divisionNegatives,            "Algebra.divisionNegatives",            { symbolic: true });
-	//ReductionManager.addReducer("Math.Arithmetic.Division", Algebra.divisionZeroOne,              "Algebra.divisionZeroOne"                                );
-	//ReductionManager.addReducer("Math.Arithmetic.Division", Algebra.divisionExtractNumerics,      "Algebra.divisionExtractNumerics",      { symbolic: true });
-	//ReductionManager.addReducer("Math.Arithmetic.Division", Algebra.divisionExtractNumericsAlone, "Algebra.divisionExtractNumericsAlone", { symbolic: true });
+	// No negatives in internal representation ReductionManager.addReducer("Math.Arithmetic.Multiplication", Algebra.multiplicationNegatives, "Algebra.multiplicationNegatives",                { symbolic: false });
+	ReductionManager.addReducer("Math.Arithmetic.Multiplication", Algebra.multiplicationDistributiveOverAddition, "Algebra.multiplicationDistributiveOverAddition");
 	
-	//ReductionManager.addReducer("Math.Arithmetic.Exponentiation", Algebra.exponentiationSpecials,                 "Algebra.exponentiationSpecials",                 { symbolic: true });
+	// No negatives in internal representation ReductionManager.addReducer("Math.Arithmetic.Division", Algebra.divisionNegatives, "Algebra.divisionNegatives";
+	ReductionManager.addReducer("Math.Arithmetic.Division", Algebra.divisionZeroOne,              "Algebra.divisionZeroOne"                                );
+	ReductionManager.addReducer("Math.Arithmetic.Division", Algebra.divisionExtractNumerics,      "Algebra.divisionExtractNumerics");
+	ReductionManager.addReducer("Math.Arithmetic.Division", Algebra.divisionExtractNumericsAlone, "Algebra.divisionExtractNumericsAlone");
+	
 	ReductionManager.addReducer("Math.Arithmetic.Exponentiation", Algebra.exponentiationSpecials, "Algebra.exponentiationSpecials");
-	//ReductionManager.addReducer("Math.Arithmetic.Exponentiation", Algebra.exponentiationMultiplicationOrDivision, "Algebra.exponentiationMultiplicationOrDivision", { symbolic: true });
+	ReductionManager.addReducer("Math.Arithmetic.Exponentiation", Algebra.exponentiationMultiplicationOrDivision, "Algebra.exponentiationMultiplicationOrDivision");
 };
+
