@@ -273,7 +273,7 @@ Algebra.divisionExtractNumerics = async (division, session) => {
 		division.replaceBy(multiplication);
 		
 		if (d === null) {
-			multiplication.addChild(CanonicalArithmetic.createInternalNumber(n));
+			multiplication.addChild(CanonicalArithmetic.createInternalNumber(n, session));
 		}
 		else {
 			if (n === null) {
@@ -282,7 +282,8 @@ Algebra.divisionExtractNumerics = async (division, session) => {
 			
 			multiplication.addChild(
 				CanonicalArithmetic.createInternalNumber(
-					CanonicalArithmetic.division(n, d, session)
+					CanonicalArithmetic.division(n, d, session),
+					session
 				)
 			);
 		}
@@ -320,7 +321,7 @@ Algebra.divisionExtractNumericsAlone = async (division, session) => {
 				division.children[0],
 				Formulae.createExpression(
 					"Math.Arithmetic.Division",
-					CanonicalArithmetic.createInternalNumber(CanonicalArithmetic.getIntegerOne(session)),
+					CanonicalArithmetic.createInternalNumber(CanonicalArithmetic.getIntegerOne(session), session),
 					division.children[1]
 				)
 			)
@@ -341,7 +342,8 @@ Algebra.divisionExtractNumericsAlone = async (division, session) => {
 						CanonicalArithmetic.getIntegerOne(session),
 						d,
 						session
-					)
+					),
+					session
 				),
 				division.children[0]
 			)
@@ -368,7 +370,8 @@ Algebra.exponentiationSpecials = async (exponentiation, session) => {
 		if (e.isZero()) {
 			exponentiation.replaceBy(
 				CanonicalArithmetic.createInternalNumber(
-					CanonicalArithmetic.isInteger(e) ? CanonicalArithmetic.getIntegerOne(session) : CanonicalArithmetic.getDecimalOne(session)
+					CanonicalArithmetic.isInteger(e) ? CanonicalArithmetic.getIntegerOne(session) : CanonicalArithmetic.getDecimalOne(session),
+					session
 				)
 			);
 			return true;
