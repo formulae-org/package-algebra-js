@@ -75,7 +75,7 @@ Algebra.negativeOfMultiplication = async (negative, session) => {
 			);
 		}
 		else {
-			mul.addChildAt(0, CanonicalArithmetic.number2InternalNumber(-1));
+			mul.addChildAt(0, Arithmetic.number2InternalNumber(-1));
 		}
 		
 		negative.replaceBy(mul);
@@ -113,7 +113,7 @@ Algebra.multiplicationNegatives = async (multiplication, session) => {
 			);
 		}
 		else {
-			multiplication.addChildAt(0, CanonicalArithmetic.number2InternalNumber(-1));
+			multiplication.addChildAt(0, Arithmetic.number2InternalNumber(-1));
 		}
 	}
 	
@@ -273,16 +273,16 @@ Algebra.divisionExtractNumerics = async (division, session) => {
 		division.replaceBy(multiplication);
 		
 		if (d === null) {
-			multiplication.addChild(CanonicalArithmetic.createInternalNumber(n, session));
+			multiplication.addChild(Arithmetic.createInternalNumber(n, session));
 		}
 		else {
 			if (n === null) {
-				n = CanonicalArithmetic.getIntegerOne(session);
+				n = Arithmetic.getIntegerOne(session);
 			}
 			
 			multiplication.addChild(
-				CanonicalArithmetic.createInternalNumber(
-					CanonicalArithmetic.division(n, d, session),
+				Arithmetic.createInternalNumber(
+					Arithmetic.division(n, d, session),
 					session
 				)
 			);
@@ -321,7 +321,7 @@ Algebra.divisionExtractNumericsAlone = async (division, session) => {
 				division.children[0],
 				Formulae.createExpression(
 					"Math.Arithmetic.Division",
-					CanonicalArithmetic.createInternalNumber(CanonicalArithmetic.getIntegerOne(session), session),
+					Arithmetic.createInternalNumber(Arithmetic.getIntegerOne(session), session),
 					division.children[1]
 				)
 			)
@@ -337,9 +337,9 @@ Algebra.divisionExtractNumericsAlone = async (division, session) => {
 		division.replaceBy(
 			Formulae.createExpression(
 				"Math.Arithmetic.Multiplication",
-				CanonicalArithmetic.createInternalNumber(
-					CanonicalArithmetic.division(
-						CanonicalArithmetic.getIntegerOne(session),
+				Arithmetic.createInternalNumber(
+					Arithmetic.division(
+						Arithmetic.getIntegerOne(session),
 						d,
 						session
 					),
@@ -369,8 +369,8 @@ Algebra.exponentiationSpecials = async (exponentiation, session) => {
 		// x ^ 0   ->   1
 		if (e.isZero()) {
 			exponentiation.replaceBy(
-				CanonicalArithmetic.createInternalNumber(
-					CanonicalArithmetic.isInteger(e) ? CanonicalArithmetic.getIntegerOne(session) : CanonicalArithmetic.getDecimalOne(session),
+				Arithmetic.createInternalNumber(
+					Arithmetic.isInteger(e) ? Arithmetic.getIntegerOne(session) : Arithmetic.getDecimalOne(session),
 					session
 				)
 			);
@@ -415,7 +415,7 @@ Algebra.exponentiationMultiplicationOrDivision = async (exponentiation, session)
 		let exponent = exponentiation.children[1];
 		
 		// Integer number exponent only
-		if (!(exponent.isInternalNumber() && CanonicalArithmetic.isInteger(exponent.get("Value")))) return false;
+		if (!(exponent.isInternalNumber() && Arithmetic.isInteger(exponent.get("Value")))) return false;
 		
 		let p;
 		let i, n = base.children.length;
